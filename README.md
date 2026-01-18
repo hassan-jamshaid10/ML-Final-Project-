@@ -1,39 +1,60 @@
-# Machine Learning Final Project
+# Machine Learning Final Project: Heart Disease Prediction
 
-## Project Setup
+Objective: Build and compare multiple machine learning models to predict whether a patient has heart disease based on clinical features.
 
-This project uses `uv` for dependency management and Jupyter Notebooks for analysis.
+## Project Structure
 
-### Prerequisites
+### 1. Setup & Data Loading
+- **`Final_Project.ipynb`**: Initializes the project and downloads the dataset using `kagglehub`.
+- **`dataset/`**: Contains the raw data (`heart_disease.csv`).
 
-- `uv` installed.
+### 2. Exploratory Data Analysis (EDA)
+- **`EDA.ipynb`**: 
+  - Missing value analysis.
+  - Statistical summary.
+  - Visualizations (Distributions, Heatmaps).
+  - Cleans the data and saves to `processed_data/`.
 
-### Installation
+### 3. Data Preprocessing
+- **`Data_Preprocessing.ipynb`**:
+  - Target variable transformation (Binary classification).
+  - One-Hot Encoding for categorical variables.
+  - Train-Test Split (80/20).
+  - Feature Scaling (StandardScaler) applied correctly to avoid leakage.
+  - Saves processed train/test sets to `processed_data/`.
 
-Dependencies are managed in `pyproject.toml`. To sync/install:
+### 4. Model Implementation
+Each model is implemented in its own notebook with **PCA (95% variance)** as a pre-processing step:
+- **`Model_1_Logistic_Regression.ipynb`** (Baseline)
+- **`Model_2_KNN.ipynb`**
+- **`Model_3_SVM.ipynb`**
+- **`Model_4_Decision_Tree.ipynb`**
+- **`Model_5_Random_Forest.ipynb`**
+- **`Model_6_ANN.ipynb`** (Artificial Neural Network)
 
-```bash
-uv sync
-```
+## How to Run
 
-### Running the Notebook
+1. **Install Dependencies**:
+   ```bash
+   uv sync
+   ```
 
-To launch the Jupyter Notebook with the correct environment:
+2. **Run Jupyter Notebook**:
+   ```bash
+   uv run jupyter notebook
+   ```
+   Or use the provided batch script:
+   ```bash
+   .\start_notebook.bat
+   ```
 
-```bash
-uv run jupyter notebook
-```
+3. **Execution Order**:
+   Please run the notebooks in the following order to ensure data dependencies are met:
+   1. `Final_Project.ipynb` (if you need to re-download data)
+   2. `EDA.ipynb`
+   3. `Data_Preprocessing.ipynb`
+   4. Any `Model_X_....ipynb` file.
 
-### Environment & Caching
+## Environment
 
-All caches are configured to be stored locally in the `.cache` directory within this folder.
-- **Kaggle Cache**: `.cache/kagglehub`
-- **Hugging Face**: `.cache/huggingface`
-- **UV Cache**: `.cache/uv`
-- **Jupyter**: `.cache/jupyter`
-
-### Project Structure
-
-- `Final_Project.ipynb`: Main notebook for the project.
-- `.env`: Environment variables for cache configuration.
-- `pyproject.toml`: Dependency definitions.
+This project uses `uv` for dependency management. Caches are stored locally in the `.cache` directory.
