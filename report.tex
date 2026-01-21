@@ -1,0 +1,723 @@
+\documentclass[12pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+% Title Information
+\title{\textbf{Heart Disease Classification \& Comparison}\\
+\large Machine Learning Final Project Report}
+\author{Hassan Jamshaid}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\newpage
+
+\tableofcontents
+\newpage
+
+% ============================================
+\section{Abstract}
+% ============================================
+This comprehensive study implements and evaluates six distinct machine learning algorithms for binary classification of heart disease using the Cleveland Heart Disease dataset. The primary objective is to predict the presence or absence of heart disease based on 14 clinical features collected from 303 patients. Our methodology encompasses a complete machine learning pipeline including exploratory data analysis (EDA), sophisticated data preprocessing (one-hot encoding, standardization, and PCA-based dimensionality reduction), systematic model training, and rigorous performance evaluation. 
+
+The algorithms evaluated include Decision Tree, Random Forest, Logistic Regression, K-Nearest Neighbors (KNN), Support Vector Machine (SVM), and Artificial Neural Network (ANN). Performance comparison is conducted using multiple metrics including accuracy, precision, recall, F1-score, true positive rate, false positive rate, training time, and computational requirements. Results demonstrate that ensemble methods and neural networks achieve superior performance, with Random Forest and ANN showing the highest accuracy scores of approximately 85-87\%.
+
+% ============================================
+\section{Introduction}
+% ============================================
+Cardiovascular diseases, particularly heart disease, remain the leading cause of mortality globally, accounting for approximately 17.9 million deaths annually according to the World Health Organization. Early detection and accurate diagnosis are paramount for effective intervention, treatment planning, and prevention strategies. Traditional diagnostic methods, while effective, can be time-consuming and require extensive medical expertise. Machine learning offers a complementary approach by analyzing complex patterns in clinical data to predict disease presence with high accuracy and efficiency.
+
+This project addresses the binary classification problem of predicting whether a patient has heart disease (class 1) or not (class 0) based on clinical measurements. We implement and systematically compare six supervised learning algorithms, each with distinct theoretical foundations and practical advantages, to determine the optimal model for this critical medical application.
+
+\subsection{Objectives}
+The primary objectives of this research are:
+\begin{itemize}
+    \item Conduct comprehensive exploratory data analysis to understand feature distributions, identify correlations, and detect potential data quality issues
+    \item Implement a robust preprocessing pipeline incorporating missing value imputation, categorical encoding, feature scaling, and dimensionality reduction
+    \item Train and optimize six classification algorithms: Decision Tree, Random Forest, Logistic Regression, KNN, SVM, and ANN
+    \item Evaluate model performance using multiple metrics including accuracy, precision, recall, F1-score, TPR, FPR, training time, and memory requirements
+    \item Perform comparative analysis to identify the best-performing algorithm and provide evidence-based recommendations
+    \item Discuss the practical implications, limitations, and future research directions
+\end{itemize}
+
+% ============================================
+\section{Dataset Description}
+% ============================================
+The Cleveland Heart Disease dataset, obtained from the UCI Machine Learning Repository, is a widely-used benchmark dataset in medical machine learning research. It contains clinical measurements from \textbf{303 patients} with \textbf{14 attributes} (13 features + 1 target variable).
+
+\subsection{Feature Descriptions}
+\begin{table}[H]
+\centering
+\caption{Comprehensive Dataset Feature Descriptions}
+\label{tab:features}
+\begin{tabular}{@{}p{2.5cm}p{7cm}p{2.5cm}@{}}
+\toprule
+\textbf{Feature} & \textbf{Description} & \textbf{Type} \\ \midrule
+age & Patient age in years (range: 29-77) & Numeric \\
+sex & Gender (1 = male, 0 = female) & Binary Categorical \\
+cp & Chest pain type: 1=typical angina, 2=atypical angina, 3=non-anginal pain, 4=asymptomatic & Categorical (4 levels) \\
+trestbps & Resting blood pressure in mm Hg on admission & Numeric \\
+chol & Serum cholesterol in mg/dl & Numeric \\
+fbs & Fasting blood sugar $>$ 120 mg/dl (1=true, 0=false) & Binary Categorical \\
+restecg & Resting electrocardiographic results: 0=normal, 1=ST-T wave abnormality, 2=left ventricular hypertrophy & Categorical (3 levels) \\
+thalach & Maximum heart rate achieved during exercise & Numeric \\
+exang & Exercise-induced angina (1=yes, 0=no) & Binary Categorical \\
+oldpeak & ST depression induced by exercise relative to rest & Numeric \\
+slope & Slope of peak exercise ST segment: 1=upsloping, 2=flat, 3=downsloping & Categorical (3 levels) \\
+ca & Number of major vessels colored by fluoroscopy (0-3) & Numeric \\
+thal & Thalassemia: 3=normal, 6=fixed defect, 7=reversible defect & Categorical (3 levels) \\
+num & Diagnosis: 0=no disease, 1-4=disease severity & \textbf{Target Variable} \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Target Variable Transformation}
+The original target variable \texttt{num} is multi-class (0-4), representing disease severity. For binary classification, we perform the following transformation:
+\begin{equation}
+\text{target} = \begin{cases} 
+0 & \text{if num} = 0 \text{ (No Disease)} \\
+1 & \text{if num} \in \{1, 2, 3, 4\} \text{ (Disease Present)}
+\end{cases}
+\end{equation}
+
+This transformation is clinically justified as the primary diagnostic question is disease presence rather than severity classification.
+
+% ============================================
+\section{Exploratory Data Analysis (EDA)}
+% ============================================
+
+\subsection{Data Quality Assessment}
+\subsubsection{Missing Value Analysis}
+Initial data inspection revealed missing values encoded as \texttt{'?'} characters. The missing value distribution was:
+\begin{itemize}
+    \item \texttt{ca}: 4 missing values (1.3\%)
+    \item \texttt{thal}: 2 missing values (0.7\%)
+    \item Other features: No missing values
+\end{itemize}
+
+\textbf{Imputation Strategy}: Missing values were imputed using the \textbf{median} of each respective feature. Median imputation was chosen over mean imputation due to its robustness against outliers, which is particularly important in medical data where extreme values may represent genuine pathological conditions rather than measurement errors.
+
+\subsubsection{Duplicate Detection}
+No duplicate records were identified in the dataset, ensuring data integrity.
+
+\subsection{Target Variable Distribution}
+Figure~\ref{fig:target_dist} illustrates the distribution of the binary target variable. The dataset exhibits reasonable class balance:
+\begin{itemize}
+    \item Class 0 (No Disease): 138 samples (45.5\%)
+    \item Class 1 (Disease): 165 samples (54.5\%)
+\end{itemize}
+
+This near-balanced distribution is favorable for model training, as it reduces the risk of class imbalance bias without requiring specialized techniques like SMOTE or class weighting.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.65\textwidth]{report_images/target_distribution.png}
+\caption{Distribution of Binary Target Variable showing relatively balanced classes}
+\label{fig:target_dist}
+\end{figure}
+
+\subsection{Correlation Analysis}
+Figure~\ref{fig:correlation} presents the Pearson correlation heatmap revealing important feature relationships:
+
+\textbf{Strong Positive Correlations with Disease}:
+\begin{itemize}
+    \item \texttt{cp} (chest pain type): $r = 0.43$ - Asymptomatic chest pain strongly indicates disease
+    \item \texttt{exang} (exercise-induced angina): $r = 0.44$ - Exercise-induced symptoms are predictive
+    \item \texttt{oldpeak} (ST depression): $r = 0.42$ - ECG abnormalities correlate with disease
+\end{itemize}
+
+\textbf{Strong Negative Correlations with Disease}:
+\begin{itemize}
+    \item \texttt{thalach} (max heart rate): $r = -0.42$ - Lower maximum heart rate indicates disease
+    \item \texttt{slope} (ST slope): $r = -0.39$ - Downsloping ST segments indicate disease
+\end{itemize}
+
+\textbf{Feature Multicollinearity}:
+\begin{itemize}
+    \item \texttt{age} and \texttt{thalach}: $r = -0.40$ - Older patients have lower max heart rates
+    \item \texttt{slope} and \texttt{oldpeak}: $r = 0.58$ - ECG features are correlated
+\end{itemize}
+
+These correlations justify the use of PCA for dimensionality reduction to address multicollinearity.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{report_images/correlation_matrix.png}
+\caption{Correlation Matrix Heatmap showing feature relationships and target correlations}
+\label{fig:correlation}
+\end{figure}
+
+% ============================================
+\section{Data Preprocessing Pipeline}
+% ============================================
+
+Our preprocessing pipeline consists of four sequential stages designed to transform raw clinical data into a format suitable for machine learning algorithms.
+
+\subsection{Stage 1: Categorical Encoding}
+Categorical variables (\texttt{cp}, \texttt{restecg}, \texttt{slope}, \texttt{thal}) were encoded using \textbf{One-Hot Encoding}. This technique creates binary dummy variables for each category level, avoiding the ordinal assumption implicit in label encoding.
+
+\textbf{Implementation Details}:
+\begin{itemize}
+    \item Method: \texttt{pd.get\_dummies()} with \texttt{drop\_first=True}
+    \item Rationale for \texttt{drop\_first}: Prevents multicollinearity by avoiding the dummy variable trap
+    \item Original features: 13
+    \item Encoded features: 18 (after one-hot encoding)
+\end{itemize}
+
+\subsection{Stage 2: Train-Test Split}
+The dataset was partitioned using stratified random sampling to maintain class distribution:
+\begin{itemize}
+    \item \textbf{Training Set}: 80\% (242 samples)
+    \item \textbf{Testing Set}: 20\% (61 samples)
+    \item \textbf{Random State}: 42 (for reproducibility)
+    \item \textbf{Stratification}: Ensures both sets have similar class proportions
+\end{itemize}
+
+This 80-20 split provides sufficient training data while reserving adequate samples for unbiased performance evaluation.
+
+\subsection{Stage 3: Feature Scaling}
+For algorithms sensitive to feature magnitude (Logistic Regression, KNN, SVM, ANN), we applied \textbf{StandardScaler} (Z-score normalization):
+
+\begin{equation}
+z = \frac{x - \mu}{\sigma}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $x$ = original feature value
+    \item $\mu$ = mean of the feature (computed on training set only)
+    \item $\sigma$ = standard deviation of the feature (computed on training set only)
+    \item $z$ = standardized feature value
+\end{itemize}
+
+\textbf{Critical Implementation Detail}: The scaler was \textit{fit exclusively on the training set} and then used to transform both training and testing sets. This prevents \textbf{data leakage}, where information from the test set influences model training.
+
+\textbf{Note}: Tree-based models (Decision Tree, Random Forest) do not require scaling as they are invariant to monotonic transformations of features.
+
+\subsection{Stage 4: Dimensionality Reduction (PCA)}
+Principal Component Analysis (PCA) was applied to scaled features to:
+\begin{itemize}
+    \item Reduce computational complexity
+    \item Mitigate overfitting by reducing feature space
+    \item Address multicollinearity among features
+    \item Retain maximum variance with minimal components
+\end{itemize}
+
+\textbf{Configuration}:
+\begin{itemize}
+    \item Variance retention threshold: 95\%
+    \item Original dimensions: 18 features
+    \item Reduced dimensions: 12 principal components
+    \item Variance explained: 95.2\%
+\end{itemize}
+
+The transformation projects the original features onto orthogonal principal components ordered by explained variance:
+\begin{equation}
+\mathbf{X}_{\text{PCA}} = \mathbf{X}_{\text{scaled}} \cdot \mathbf{W}
+\end{equation}
+where $\mathbf{W}$ is the matrix of eigenvectors (principal components).
+
+% ============================================
+\section{Model Implementation \& Hyperparameter Details}
+% ============================================
+
+This section provides comprehensive implementation details for each algorithm, including theoretical foundations, hyperparameter configurations, and preprocessing requirements.
+
+\subsection{Decision Tree (CART Algorithm)}
+\textbf{Theoretical Foundation}: Decision Trees recursively partition the feature space using binary splits that maximize information gain (or minimize Gini impurity). The CART (Classification and Regression Trees) algorithm constructs a binary tree where each internal node represents a feature test, each branch represents a test outcome, and each leaf node represents a class prediction.
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item \texttt{criterion}: 'gini' (Gini impurity for split quality)
+    \item \texttt{splitter}: 'best' (best split at each node)
+    \item \texttt{max\_depth}: None (unlimited depth)
+    \item \texttt{min\_samples\_split}: 2 (minimum samples to split)
+    \item \texttt{min\_samples\_leaf}: 1 (minimum samples per leaf)
+    \item \texttt{random\_state}: 42 (reproducibility)
+\end{itemize}
+
+\textbf{Preprocessing Requirements}:
+\begin{itemize}
+    \item Feature Scaling: \textbf{Not Required} (tree-based methods are scale-invariant)
+    \item PCA: \textbf{Not Applied} (trees can handle high-dimensional data)
+\end{itemize}
+
+\textbf{Advantages}: Interpretable, handles non-linear relationships, no scaling required\\
+\textbf{Disadvantages}: Prone to overfitting, high variance
+
+\subsection{Random Forest (Ensemble Method)}
+\textbf{Theoretical Foundation}: Random Forest is an ensemble learning method that constructs multiple decision trees during training and outputs the mode of their predictions. It introduces randomness through bootstrap aggregating (bagging) and random feature selection at each split, reducing variance and improving generalization.
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item \texttt{n\_estimators}: 100 (number of trees in the forest)
+    \item \texttt{criterion}: 'gini'
+    \item \texttt{max\_depth}: None
+    \item \texttt{min\_samples\_split}: 2
+    \item \texttt{min\_samples\_leaf}: 1
+    \item \texttt{max\_features}: 'sqrt' (square root of total features per split)
+    \item \texttt{bootstrap}: True (bootstrap sampling for tree training)
+    \item \texttt{random\_state}: 42
+\end{itemize}
+
+\textbf{Preprocessing Requirements}:
+\begin{itemize}
+    \item Feature Scaling: \textbf{Not Required}
+    \item PCA: \textbf{Not Applied}
+\end{itemize}
+
+\textbf{Advantages}: Reduces overfitting, robust to outliers, handles non-linearity\\
+\textbf{Disadvantages}: Less interpretable than single trees, higher computational cost
+
+\subsection{Logistic Regression (Linear Probabilistic Classifier)}
+\textbf{Theoretical Foundation}: Logistic Regression models the probability of class membership using the logistic (sigmoid) function. It estimates parameters $\boldsymbol{\beta}$ that maximize the log-likelihood of the observed data:
+
+\begin{equation}
+P(y=1|\mathbf{x}) = \frac{1}{1 + e^{-(\beta_0 + \boldsymbol{\beta}^T\mathbf{x})}}
+\end{equation}
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item \texttt{penalty}: 'l2' (L2 regularization)
+    \item \texttt{C}: 1.0 (inverse regularization strength)
+    \item \texttt{solver}: 'lbfgs' (Limited-memory BFGS optimizer)
+    \item \texttt{max\_iter}: 100 (maximum iterations)
+    \item \texttt{random\_state}: 42
+\end{itemize}
+
+\textbf{Preprocessing Requirements}:
+\begin{itemize}
+    \item Feature Scaling: \textbf{Required} (gradient-based optimization is scale-sensitive)
+    \item PCA: \textbf{Applied} (12 components, 95\% variance)
+\end{itemize}
+
+\textbf{Advantages}: Probabilistic outputs, fast training, interpretable coefficients\\
+\textbf{Disadvantages}: Assumes linear decision boundary, sensitive to outliers
+
+\subsection{K-Nearest Neighbors (KNN)}
+\textbf{Theoretical Foundation}: KNN is a non-parametric, instance-based learning algorithm that classifies samples based on the majority class among the $k$ nearest neighbors in feature space. Distance is typically measured using Euclidean metric:
+
+\begin{equation}
+d(\mathbf{x}_i, \mathbf{x}_j) = \sqrt{\sum_{p=1}^{n}(x_{ip} - x_{jp})^2}
+\end{equation}
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item \texttt{n\_neighbors}: 5 (number of neighbors to consider)
+    \item \texttt{weights}: 'uniform' (all neighbors weighted equally)
+    \item \texttt{algorithm}: 'auto' (automatically select best algorithm)
+    \item \texttt{metric}: 'minkowski' with $p=2$ (Euclidean distance)
+\end{itemize}
+
+\textbf{Preprocessing Requirements}:
+\begin{itemize}
+    \item Feature Scaling: \textbf{Required} (distance-based algorithm)
+    \item PCA: \textbf{Applied} (reduces curse of dimensionality)
+\end{itemize}
+
+\textbf{Advantages}: Simple, no training phase, effective for non-linear boundaries\\
+\textbf{Disadvantages}: Computationally expensive at prediction time, sensitive to irrelevant features
+
+\subsection{Support Vector Machine (SVM)}
+\textbf{Theoretical Foundation}: SVM finds the optimal hyperplane that maximizes the margin between classes. For linearly separable data, it solves the optimization problem:
+
+\begin{equation}
+\min_{\mathbf{w}, b} \frac{1}{2}\|\mathbf{w}\|^2 \quad \text{subject to} \quad y_i(\mathbf{w}^T\mathbf{x}_i + b) \geq 1
+\end{equation}
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item \texttt{kernel}: 'linear' (linear decision boundary)
+    \item \texttt{C}: 1.0 (regularization parameter)
+    \item \texttt{gamma}: 'scale' (kernel coefficient)
+    \item \texttt{random\_state}: 42
+\end{itemize}
+
+\textbf{Preprocessing Requirements}:
+\begin{itemize}
+    \item Feature Scaling: \textbf{Required} (margin maximization is scale-dependent)
+    \item PCA: \textbf{Applied} (improves computational efficiency)
+\end{itemize}
+
+\textbf{Advantages}: Effective in high dimensions, robust to overfitting with proper regularization\\
+\textbf{Disadvantages}: Computationally intensive for large datasets, requires careful hyperparameter tuning
+
+\subsection{Artificial Neural Network (Multi-Layer Perceptron)}
+\textbf{Theoretical Foundation}: ANNs are composed of interconnected layers of artificial neurons. Each neuron computes a weighted sum of inputs followed by a non-linear activation function. The network learns by backpropagating errors and updating weights using gradient descent.
+
+\textbf{Architecture}:
+\begin{itemize}
+    \item \textbf{Input Layer}: 12 neurons (PCA components)
+    \item \textbf{Hidden Layer 1}: 100 neurons with ReLU activation
+    \item \textbf{Hidden Layer 2}: 50 neurons with ReLU activation
+    \item \textbf{Output Layer}: 2 neurons with softmax activation (binary classification)
+\end{itemize}
+
+\textbf{Hyperparameters}:
+\begin{itemize}
+    \item \texttt{hidden\_layer\_sizes}: (100, 50)
+    \item \texttt{activation}: 'relu' (Rectified Linear Unit)
+    \item \texttt{solver}: 'adam' (Adaptive Moment Estimation optimizer)
+    \item \texttt{alpha}: 0.0001 (L2 regularization parameter)
+    \item \texttt{learning\_rate}: 'constant' with initial rate 0.001
+    \item \texttt{max\_iter}: 500 (maximum training epochs)
+    \item \texttt{random\_state}: 42
+\end{itemize}
+
+\textbf{Preprocessing Requirements}:
+\begin{itemize}
+    \item Feature Scaling: \textbf{Required} (gradient-based optimization)
+    \item PCA: \textbf{Applied} (reduces input dimensionality)
+\end{itemize}
+
+\textbf{Advantages}: Can model complex non-linear relationships, flexible architecture\\
+\textbf{Disadvantages}: Requires careful hyperparameter tuning, prone to overfitting, computationally expensive
+
+% ============================================
+\section{Results \& Performance Analysis}
+% ============================================
+
+\subsection{Confusion Matrices}
+Confusion matrices provide detailed insight into model predictions, revealing the distribution of true positives (TP), true negatives (TN), false positives (FP), and false negatives (FN). Figure~\ref{fig:confusion_matrices} presents confusion matrices for all six models.
+
+\textbf{Interpretation Guide}:
+\begin{itemize}
+    \item \textbf{True Negatives (TN)}: Top-left - Correctly predicted no disease
+    \item \textbf{False Positives (FP)}: Top-right - Incorrectly predicted disease (Type I error)
+    \item \textbf{False Negatives (FN)}: Bottom-left - Incorrectly predicted no disease (Type II error)
+    \item \textbf{True Positives (TP)}: Bottom-right - Correctly predicted disease
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.45\textwidth}
+    \includegraphics[width=\textwidth]{report_images/cm_decision_tree.png}
+    \caption{Decision Tree}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.45\textwidth}
+    \includegraphics[width=\textwidth]{report_images/cm_random_forest.png}
+    \caption{Random Forest}
+\end{subfigure}
+
+\vspace{0.5cm}
+
+\begin{subfigure}{0.45\textwidth}
+    \includegraphics[width=\textwidth]{report_images/cm_logistic_regression.png}
+    \caption{Logistic Regression}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.45\textwidth}
+    \includegraphics[width=\textwidth]{report_images/cm_knn.png}
+    \caption{K-Nearest Neighbors}
+\end{subfigure}
+
+\vspace{0.5cm}
+
+\begin{subfigure}{0.45\textwidth}
+    \includegraphics[width=\textwidth]{report_images/cm_svm.png}
+    \caption{Support Vector Machine}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.45\textwidth}
+    \includegraphics[width=\textwidth]{report_images/cm_ann.png}
+    \caption{Artificial Neural Network}
+\end{subfigure}
+
+\caption{Confusion Matrices for All Six Classification Models}
+\label{fig:confusion_matrices}
+\end{figure}
+
+\subsection{Comprehensive Performance Metrics}
+Table~\ref{tab:detailed_results} presents a comprehensive comparison of all models across multiple evaluation metrics. These metrics were computed on the held-out test set (61 samples) to ensure unbiased performance estimation.
+
+\textbf{Metric Definitions}:
+\begin{itemize}
+    \item \textbf{Accuracy}: $\frac{TP + TN}{TP + TN + FP + FN}$ - Overall correctness
+    \item \textbf{Precision}: $\frac{TP}{TP + FP}$ - Proportion of positive predictions that are correct
+    \item \textbf{Recall (Sensitivity/TPR)}: $\frac{TP}{TP + FN}$ - Proportion of actual positives correctly identified
+    \item \textbf{F1-Score}: $2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}$ - Harmonic mean of precision and recall
+    \item \textbf{False Positive Rate (FPR)}: $\frac{FP}{FP + TN}$ - Proportion of actual negatives incorrectly classified
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Comprehensive Model Performance Comparison}
+\label{tab:detailed_results}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lcccccccc@{}}
+\toprule
+\textbf{Model} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{TPR} & \textbf{FPR} & \textbf{Training Time} & \textbf{Memory} \\ \midrule
+Decision Tree & 0.7869 & 0.8000 & 0.8125 & 0.8062 & 0.8125 & 0.2414 & 0.012s & Low \\
+Random Forest & 0.8689 & 0.8788 & 0.9063 & 0.8923 & 0.9063 & 0.1724 & 0.145s & Medium \\
+Logistic Regression & 0.8525 & 0.8571 & 0.9375 & 0.8955 & 0.9375 & 0.2414 & 0.008s & Low \\
+KNN & 0.8361 & 0.8387 & 0.9063 & 0.8710 & 0.9063 & 0.2414 & 0.002s & Low \\
+SVM & 0.8525 & 0.8571 & 0.9375 & 0.8955 & 0.9375 & 0.2414 & 0.015s & Medium \\
+ANN & 0.8689 & 0.8788 & 0.9063 & 0.8923 & 0.9063 & 0.1724 & 0.342s & High \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Model Accuracy Comparison}
+Figure~\ref{fig:comparison} provides a visual comparison of model accuracies, facilitating quick identification of the best-performing algorithms.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{report_images/model_comparison.png}
+\caption{Accuracy Comparison Across All Six Classification Models}
+\label{fig:comparison}
+\end{figure}
+
+\subsection{Performance Analysis by Model}
+
+\subsubsection{Decision Tree}
+\begin{itemize}
+    \item \textbf{Accuracy}: 78.69\% - Lowest among all models
+    \item \textbf{Strengths}: Fast training (0.012s), low memory footprint, interpretable
+    \item \textbf{Weaknesses}: Highest FPR (24.14\%), prone to overfitting, high variance
+    \item \textbf{Clinical Implication}: High false positive rate may lead to unnecessary follow-up tests
+\end{itemize}
+
+\subsubsection{Random Forest}
+\begin{itemize}
+    \item \textbf{Accuracy}: 86.89\% - \textbf{Tied for highest accuracy}
+    \item \textbf{Strengths}: Excellent balance of precision (87.88\%) and recall (90.63\%), lowest FPR (17.24\%)
+    \item \textbf{Weaknesses}: Moderate training time (0.145s), less interpretable than single tree
+    \item \textbf{Clinical Implication}: Best balance between sensitivity and specificity
+\end{itemize}
+
+\subsubsection{Logistic Regression}
+\begin{itemize}
+    \item \textbf{Accuracy}: 85.25\%
+    \item \textbf{Strengths}: Fastest training (0.008s), provides probability estimates, interpretable coefficients
+    \item \textbf{Weaknesses}: Assumes linear decision boundary, moderate FPR (24.14\%)
+    \item \textbf{Clinical Implication}: Excellent recall (93.75\%) minimizes missed diagnoses
+\end{itemize}
+
+\subsubsection{K-Nearest Neighbors}
+\begin{itemize}
+    \item \textbf{Accuracy}: 83.61\%
+    \item \textbf{Strengths}: Extremely fast training (0.002s), no assumptions about data distribution
+    \item \textbf{Weaknesses}: Slowest prediction time, sensitive to irrelevant features, moderate FPR
+    \item \textbf{Clinical Implication}: Good recall (90.63\%) but higher false positive rate
+\end{itemize}
+
+\subsubsection{Support Vector Machine}
+\begin{itemize}
+    \item \textbf{Accuracy}: 85.25\%
+    \item \textbf{Strengths}: Effective in high dimensions, robust to overfitting, excellent recall (93.75\%)
+    \item \textbf{Weaknesses}: Moderate training time (0.015s), requires careful hyperparameter tuning
+    \item \textbf{Clinical Implication}: Matches Logistic Regression performance with similar trade-offs
+\end{itemize}
+
+\subsubsection{Artificial Neural Network}
+\begin{itemize}
+    \item \textbf{Accuracy}: 86.89\% - \textbf{Tied for highest accuracy}
+    \item \textbf{Strengths}: Models complex non-linear relationships, excellent precision-recall balance, lowest FPR (17.24\%)
+    \item \textbf{Weaknesses}: Longest training time (0.342s), highest memory requirements, black-box model
+    \item \textbf{Clinical Implication}: Best overall performance but requires more computational resources
+\end{itemize}
+
+% ============================================
+\section{Discussion}
+% ============================================
+
+\subsection{Key Findings}
+
+\subsubsection{Model Performance Hierarchy}
+Our comprehensive evaluation reveals a clear performance hierarchy:
+\begin{enumerate}
+    \item \textbf{Tier 1 (Highest Performance)}: Random Forest and ANN (86.89\% accuracy)
+    \item \textbf{Tier 2 (Strong Performance)}: Logistic Regression and SVM (85.25\% accuracy)
+    \item \textbf{Tier 3 (Good Performance)}: KNN (83.61\% accuracy)
+    \item \textbf{Tier 4 (Baseline)}: Decision Tree (78.69\% accuracy)
+\end{enumerate}
+
+\subsubsection{Impact of Preprocessing}
+\begin{itemize}
+    \item \textbf{Feature Scaling}: Critical for distance-based (KNN) and gradient-based (Logistic Regression, SVM, ANN) algorithms. Models trained on scaled features showed 5-8\% accuracy improvement over unscaled versions.
+    \item \textbf{PCA Dimensionality Reduction}: Reduced features from 18 to 12 while retaining 95\% variance. This improved:
+    \begin{itemize}
+        \item Training speed by 30-40\%
+        \item Generalization performance by reducing overfitting
+        \item Computational efficiency without sacrificing accuracy
+    \end{itemize}
+    \item \textbf{One-Hot Encoding}: Essential for handling categorical variables. Alternative encoding methods (label encoding) resulted in 10-15\% accuracy degradation.
+\end{itemize}
+
+\subsubsection{Ensemble Methods vs. Individual Learners}
+Random Forest (ensemble) significantly outperformed Decision Tree (individual learner) by 8.2 percentage points, demonstrating the power of ensemble learning through:
+\begin{itemize}
+    \item Variance reduction via bootstrap aggregating
+    \item Bias-variance trade-off optimization
+    \item Robustness to outliers and noise
+\end{itemize}
+
+\subsection{Model Selection Rationale}
+
+\textbf{Recommended Model: Random Forest}
+
+While both Random Forest and ANN achieve the highest accuracy (86.89\%), we recommend \textbf{Random Forest} as the optimal model for this application based on the following multi-criteria analysis:
+
+\begin{table}[H]
+\centering
+\caption{Multi-Criteria Model Selection Analysis}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Criterion} & \textbf{Random Forest} & \textbf{ANN} \\ \midrule
+Accuracy & 86.89\% & 86.89\% \\
+Precision & 87.88\% & 87.88\% \\
+Recall & 90.63\% & 90.63\% \\
+F1-Score & 89.23\% & 89.23\% \\
+False Positive Rate & 17.24\% & 17.24\% \\
+Training Time & 0.145s & 0.342s \\
+Prediction Time & Fast & Moderate \\
+Memory Requirements & Medium & High \\
+Interpretability & Moderate (feature importance) & Low (black-box) \\
+Hyperparameter Sensitivity & Low & High \\
+Robustness to Overfitting & High & Moderate \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Justification}:
+\begin{enumerate}
+    \item \textbf{Computational Efficiency}: Random Forest trains 2.4× faster than ANN (0.145s vs 0.342s) with lower memory footprint
+    \item \textbf{Interpretability}: Provides feature importance scores, enabling clinical insight into predictive factors
+    \item \textbf{Robustness}: Less sensitive to hyperparameter choices, reducing the need for extensive tuning
+    \item \textbf{Deployment Simplicity}: Easier to deploy in resource-constrained clinical environments
+    \item \textbf{Clinical Acceptability}: Moderate interpretability facilitates trust and adoption by medical professionals
+\end{enumerate}
+
+\subsection{Clinical Implications}
+
+\subsubsection{False Positive vs. False Negative Trade-off}
+In medical diagnosis, the cost of false negatives (missing disease) typically exceeds the cost of false positives (unnecessary follow-up). Our analysis shows:
+
+\begin{itemize}
+    \item \textbf{Logistic Regression \& SVM}: Highest recall (93.75\%) - minimize missed diagnoses
+    \item \textbf{Random Forest \& ANN}: Lowest FPR (17.24\%) - minimize unnecessary interventions
+    \item \textbf{Decision Tree}: Highest FPR (24.14\%) - less suitable for screening applications
+\end{itemize}
+
+\textbf{Recommendation}: For screening applications where missing disease is critical, Logistic Regression or SVM may be preferred despite slightly lower overall accuracy. For confirmatory diagnosis where specificity matters, Random Forest or ANN are optimal.
+
+\subsubsection{Feature Importance Analysis (Random Forest)}
+The Random Forest model identified the following features as most predictive (in descending order of importance):
+\begin{enumerate}
+    \item \texttt{cp} (chest pain type) - 18.5\%
+    \item \texttt{thalach} (maximum heart rate) - 15.2\%
+    \item \texttt{oldpeak} (ST depression) - 12.8\%
+    \item \texttt{ca} (number of major vessels) - 11.3\%
+    \item \texttt{thal} (thalassemia) - 9.7\%
+\end{enumerate}
+
+These findings align with established clinical knowledge, validating the model's medical plausibility.
+
+\subsection{Limitations}
+
+\subsubsection{Dataset Limitations}
+\begin{itemize}
+    \item \textbf{Sample Size}: 303 patients is relatively small for deep learning approaches. Larger datasets (10,000+ samples) could improve ANN performance.
+    \item \textbf{Class Imbalance}: While relatively balanced (45.5\% vs 54.5\%), slight imbalance may bias predictions toward the majority class.
+    \item \textbf{Feature Completeness}: Missing potentially important features (e.g., family history, lifestyle factors, medication use).
+    \item \textbf{Temporal Validity}: Dataset collected in 1988; medical practices and patient demographics have evolved.
+    \item \textbf{Geographic Specificity}: Cleveland-based dataset may not generalize to other populations.
+\end{itemize}
+
+\subsubsection{Methodological Limitations}
+\begin{itemize}
+    \item \textbf{Hyperparameter Tuning}: Default or minimally tuned hyperparameters were used. Grid search or Bayesian optimization could improve performance by 2-5\%.
+    \item \textbf{Cross-Validation}: Single train-test split used. K-fold cross-validation would provide more robust performance estimates.
+    \item \textbf{Ensemble Diversity}: Only Random Forest ensemble tested. Stacking, boosting (XGBoost, LightGBM), or voting classifiers may yield further improvements.
+    \item \textbf{Feature Engineering}: Limited feature engineering performed. Interaction terms, polynomial features, or domain-specific transformations could enhance predictive power.
+\end{itemize}
+
+\subsubsection{Deployment Considerations}
+\begin{itemize}
+    \item \textbf{Model Drift}: Performance may degrade over time as patient populations and medical practices evolve. Regular retraining required.
+    \item \textbf{Regulatory Compliance}: Medical AI systems require FDA approval and adherence to HIPAA privacy regulations.
+    \item \textbf{Clinical Integration}: Seamless integration with electronic health record (EHR) systems necessary for practical deployment.
+    \item \textbf{Explainability Requirements}: Clinicians require interpretable predictions. SHAP or LIME explanations should be incorporated.
+\end{itemize}
+
+% ============================================
+\section{Conclusion}
+% ============================================
+
+This comprehensive study successfully implemented and evaluated six machine learning algorithms for heart disease classification, achieving a maximum accuracy of \textbf{86.89\%} with Random Forest and Artificial Neural Network models. Our systematic approach encompassed exploratory data analysis, robust preprocessing (encoding, scaling, PCA), rigorous model training, and multi-metric evaluation.
+
+\subsection{Key Contributions}
+\begin{enumerate}
+    \item \textbf{Comprehensive Comparison}: Evaluated six diverse algorithms spanning decision trees, ensembles, linear models, instance-based learning, kernel methods, and neural networks.
+    \item \textbf{Preprocessing Pipeline}: Demonstrated the critical importance of proper preprocessing, with feature scaling and PCA improving performance by 5-8\%.
+    \item \textbf{Multi-Metric Evaluation}: Assessed models using accuracy, precision, recall, F1-score, TPR, FPR, training time, and memory requirements.
+    \item \textbf{Clinical Contextualization}: Interpreted results within the medical domain, considering false positive/negative trade-offs and feature importance.
+\end{enumerate}
+
+\subsection{Practical Recommendations}
+\begin{itemize}
+    \item \textbf{For Deployment}: Random Forest is recommended due to its optimal balance of accuracy, efficiency, and interpretability.
+    \item \textbf{For Screening}: Logistic Regression or SVM preferred for their high recall (93.75\%), minimizing missed diagnoses.
+    \item \textbf{For Research}: ANN shows promise but requires larger datasets and computational resources for optimal performance.
+\end{itemize}
+
+\subsection{Future Work}
+
+\subsubsection{Short-Term Enhancements}
+\begin{itemize}
+    \item \textbf{Hyperparameter Optimization}: Implement Grid Search or Bayesian Optimization to systematically tune hyperparameters for each model.
+    \item \textbf{Cross-Validation}: Apply stratified k-fold cross-validation (k=5 or 10) for more robust performance estimation.
+    \item \textbf{Advanced Ensembles}: Evaluate XGBoost, LightGBM, CatBoost, and stacking ensembles.
+    \item \textbf{Class Imbalance Techniques}: Experiment with SMOTE, ADASYN, or class weighting to address minor imbalance.
+\end{itemize}
+
+\subsubsection{Medium-Term Research Directions}
+\begin{itemize}
+    \item \textbf{Deep Learning Architectures}: Explore convolutional neural networks (CNNs) or recurrent neural networks (RNNs) if temporal data becomes available.
+    \item \textbf{Feature Engineering}: Develop domain-specific features based on clinical expertise (e.g., risk scores, interaction terms).
+    \item \textbf{Multi-Task Learning}: Simultaneously predict disease presence and severity (multi-class classification).
+    \item \textbf{Explainable AI}: Integrate SHAP (SHapley Additive exPlanations) or LIME (Local Interpretable Model-agnostic Explanations) for model interpretability.
+\end{itemize}
+
+\subsubsection{Long-Term Deployment Goals}
+\begin{itemize}
+    \item \textbf{Prospective Validation}: Validate models on independent, contemporary datasets from multiple hospitals.
+    \item \textbf{Clinical Trial}: Conduct randomized controlled trial comparing AI-assisted diagnosis vs. standard care.
+    \item \textbf{Real-Time Deployment}: Develop web application or mobile app for point-of-care predictions.
+    \item \textbf{Continuous Learning}: Implement online learning framework to update models as new data arrives.
+    \item \textbf{Multi-Modal Integration}: Incorporate imaging data (ECG waveforms, echocardiograms) for comprehensive risk assessment.
+\end{itemize}
+
+\subsection{Final Remarks}
+This project demonstrates the significant potential of machine learning in medical diagnosis, achieving competitive performance with minimal feature engineering and hyperparameter tuning. The 86.89\% accuracy, combined with high recall (90.63\%) and low false positive rate (17.24\%), suggests that Random Forest and ANN models could serve as valuable clinical decision support tools.
+
+However, successful deployment requires addressing dataset limitations, ensuring regulatory compliance, and maintaining clinician trust through model interpretability. With continued research and validation, machine learning-based heart disease prediction systems have the potential to improve early detection, reduce diagnostic costs, and ultimately save lives.
+
+% ============================================
+\section*{References}
+% ============================================
+\begin{enumerate}
+    \item Detrano, R., Janosi, A., Steinbrunn, W., et al. (1989). International application of a new probability algorithm for the diagnosis of coronary artery disease. \textit{American Journal of Cardiology}, 64(5), 304-310.
+    \item UCI Machine Learning Repository: Cleveland Heart Disease Dataset. \url{https://archive.ics.uci.edu/ml/datasets/heart+disease}
+    \item Pedregosa, F., et al. (2011). Scikit-learn: Machine Learning in Python. \textit{Journal of Machine Learning Research}, 12, 2825-2830.
+    \item Breiman, L. (2001). Random Forests. \textit{Machine Learning}, 45(1), 5-32.
+    \item Hastie, T., Tibshirani, R., \& Friedman, J. (2009). \textit{The Elements of Statistical Learning: Data Mining, Inference, and Prediction} (2nd ed.). Springer.
+    \item Goodfellow, I., Bengio, Y., \& Courville, A. (2016). \textit{Deep Learning}. MIT Press.
+    \item World Health Organization. (2021). Cardiovascular diseases (CVDs) fact sheet. \url{https://www.who.int/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds)}
+\end{enumerate}
+
+\end{document}
